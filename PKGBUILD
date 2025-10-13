@@ -3,8 +3,8 @@
 pkgname=calamares
 pkgver=3.4.0
 _pkgver=3.4.0
-pkgrel=3
-_commit=8f7557d820c551890d537fe999775ed047528d26
+pkgrel=5
+_commit=037a317fa986034d02cc37e84ddcf3c2119565df
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64')
 url="https://gitlab.manjaro.org/applications/calamares"
@@ -52,11 +52,8 @@ backup=(
 source=(
 #  "$pkgname-$pkgver.tar.gz::$url/-/archive/v$pkgver/calamares-v$pkgver.tar.gz"
   "$pkgname-$pkgver-$pkgrel.tar.gz::$url/-/archive/$_commit/$pkgname-$_commit.tar.gz"
-  revert-4e09e1f.patch revert-d29088e.patch
 )
-sha256sums=('2c50a9ff43a127167535d16e6a3a59446ae73cff1c5c7eddc7bc48d8a2eebe29'
-            '98ab0beb8a2b9d7499c090b23bb32383831672509eaa281da5f10c1e4e104742'
-            '23b534dca5db3d8aa172fd635e740dbdaad533be7f7243311d49f976baafb9ed')
+sha256sums=('edb09ad7dca23fe329d10b86c097aa381f000d7541ec7e4ecfa2f4be837b2a97')
 
 prepare() {
   mv ${srcdir}/calamares-${_commit} ${srcdir}/calamares-${pkgver}
