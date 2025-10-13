@@ -1,0 +1,139 @@
+--- b/src/modules/bootloader/main.py
++++ a/src/modules/bootloader/main.py
+@@ -658,7 +658,7 @@
+                 return
+             
+         # boot_loader_install_path points to the physical disk to install GRUB
++        # to. It should start with "/dev/", and be at least as long as the 
+-        # to. It should start with "/dev/", and be at least as long as the
+         # string "/dev/sda".
+         if not boot_loader_install_path.startswith("/dev/") or len(boot_loader_install_path) < 8:
+             raise ValueError(f"boot_loader_install_path contains unexpected value '{boot_loader_install_path}'")
+--- b/src/modules/partition/PartitionViewStep.cpp
++++ a/src/modules/partition/PartitionViewStep.cpp
+@@ -918,8 +918,6 @@
+                       "will use gpt for efi or msdos for bios";
+     }
+     gs->insert( "defaultPartitionTableType", partitionTableName );
+-    gs->insert( "createHybridBootloaderLayout",
+-                Calamares::getBool( configurationMap, "createHybridBootloaderLayout", false ) );
+ 
+     // Now that we have the config, we load the PartitionCoreModule in the background
+     // because it could take a while. Then when it's done, we can set up the widgets
+--- b/src/modules/partition/core/PartitionActions.cpp
++++ a/src/modules/partition/core/PartitionActions.cpp
+@@ -89,11 +89,6 @@
+     Calamares::GlobalStorage* gs = Calamares::JobQueue::instance()->globalStorage();
+ 
+     const bool isEfi = PartUtils::isEfiSystem();
+-    
+-    bool createHybridBootloaderLayout = false;
+-    if ( gs->contains( "createHybridBootloaderLayout" ) ) {
+-        createHybridBootloaderLayout = gs->value( "createHybridBootloaderLayout" ).toBool();
+-    }
+ 
+     // Partition sizes are expressed in MiB, should be multiples of
+     // the logical sector size (usually 512B). EFI starts with 2MiB
+@@ -110,7 +105,7 @@
+     PartitionTable::TableType partType = PartitionTable::nameToTableType( o.defaultPartitionTableType );
+     if ( partType == PartitionTable::unknownTableType )
+     {
++        partType = isEfi ? PartitionTable::gpt : PartitionTable::msdos;
+-        partType = ( isEfi || createHybridBootloaderLayout ) ? PartitionTable::gpt : PartitionTable::msdos;
+     }
+     // last usable sector possibly allowing for secondary GPT using 66 sectors (256 entries)
+     const qint64 lastUsableSector = dev->totalLogical() - ( partType == PartitionTable::gpt ? 67 : 1 );
+@@ -123,7 +118,7 @@
+ 
+     core->createPartitionTable( dev, partType );
+ 
++    if ( isEfi )
+-    if ( createHybridBootloaderLayout || isEfi )
+     {
+         qint64 uefisys_part_sizeB = PartUtils::efiFilesystemRecommendedSize();
+         qint64 efiSectorCount = Calamares::bytesToSectors( uefisys_part_sizeB, dev->logicalSize() );
+@@ -149,25 +144,6 @@
+         }
+         core->createPartition( dev, efiPartition, KPM_PARTITION_FLAG_ESP );
+         firstFreeSector = lastSector + 1;
+-
+-        if ( createHybridBootloaderLayout )
+-        {
+-            qint64 bios_part_sizeB = 8_MiB;
+-            qint64 biosSectorCount = Calamares::bytesToSectors( bios_part_sizeB, dev->logicalSize() );
+-            Q_ASSERT( biosSectorCount > 0 );
+-
+-            qint64 lastSector = firstFreeSector + biosSectorCount - 1;
+-            Partition* biosPartition = KPMHelpers::createNewPartition( dev->partitionTable(),
+-                                                                       *dev,
+-                                                                       PartitionRole( PartitionRole::Primary ),
+-                                                                       FileSystem::Unformatted,
+-                                                                       QString(),
+-                                                                       firstFreeSector,
+-                                                                       lastSector,
+-                                                                       KPM_PARTITION_FLAG( None ) );
+-            core->createPartition( dev, biosPartition, KPM_PARTITION_FLAG( BiosGrub ) );
+-            firstFreeSector = lastSector + 1;
+-        }
+     }
+ 
+     const bool mayCreateSwap
+--- b/src/modules/partition/gui/PartitionLabelsView.cpp
++++ a/src/modules/partition/gui/PartitionLabelsView.cpp
+@@ -13,7 +13,6 @@
+ #include "core/ColorUtils.h"
+ #include "core/PartitionModel.h"
+ #include "core/SizeUtils.h"
+-#include "core/KPMHelpers.h"
+ 
+ #include "utils/Gui.h"
+ #include "utils/Logger.h"
+@@ -21,7 +20,6 @@
+ 
+ #include <kpmcore/core/device.h>
+ #include <kpmcore/fs/filesystem.h>
+-#include <kpmcore/core/partition.h>
+ 
+ // Qt
+ #include <QGuiApplication>
+@@ -43,12 +41,6 @@
+     return texts;
+ }
+ 
+-static uint
+-getPartitionModelIndexFlags( const QModelIndex& index )
+-{
+-    return static_cast< Partition* >( index.data( PartitionModel::PartitionPtrRole ).value< void* >() )->property( "_calamares_flags" ).toUInt();
+-}
+-
+ PartitionLabelsView::PartitionLabelsView( QWidget* parent )
+     : QAbstractItemView( parent )
+     , m_canBeSelected( []( const QModelIndex& ) { return true; } )
+@@ -198,11 +190,6 @@
+             {
+                 firstLine = tr( "EFI system", "@label" );
+             }
+-            else if ( index.data( PartitionModel::FileSystemTypeRole ).toInt() == FileSystem::Unformatted
+-                      && getPartitionModelIndexFlags( index ) & KPM_PARTITION_FLAG( BiosGrub ) )
+-            {
+-                firstLine = tr("BIOS boot", "@label" );
+-            }
+             else if ( index.data( PartitionModel::FileSystemTypeRole ).toInt() == FileSystem::LinuxSwap )
+             {
+                 firstLine = tr( "Swap", "@label" );
+--- b/src/modules/partition/partition.conf
++++ a/src/modules/partition/partition.conf
+@@ -178,13 +178,6 @@
+ #
+ # defaultPartitionTableType: msdos
+ 
+-# Specify whether to create a partition table layout suitable for a hybrid
+-# (BIOS + EFI) bootloader installation. This will prepend both bios-boot and
+-# EFI system partitions to the partition layout, regardless of whether the
+-# booted system uses BIOS or EFI firmware. Defaults to false.
+-#
+-# createHybridBootloaderLayout: false
+-
+ # Requirement for partition table type
+ #
+ # Restrict the installation on disks that match the type of partition
