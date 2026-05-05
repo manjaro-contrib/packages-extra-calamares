@@ -3,8 +3,8 @@
 pkgname=calamares
 pkgver=3.4.0
 _pkgver=3.4.0
-pkgrel=15
-_commit=037a317fa986034d02cc37e84ddcf3c2119565df
+pkgrel=17
+_commit=adba02351c96e13ad0fae4b31ce66ddf530e07a7
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64')
 url="https://gitlab.manjaro.org/applications/calamares"
@@ -22,6 +22,7 @@ depends=(
   'boost-libs'
   'ckbcomp'
   'hwinfo'
+  'kcrash'
   'kconfig'
   'kcoreaddons'
   'kiconthemes'
@@ -53,7 +54,7 @@ source=(
 #  "$pkgname-$pkgver.tar.gz::$url/-/archive/v$pkgver/calamares-v$pkgver.tar.gz"
   "$pkgname-$pkgver-$pkgrel.tar.gz::$url/-/archive/$_commit/$pkgname-$_commit.tar.gz"
 )
-sha256sums=('edb09ad7dca23fe329d10b86c097aa381f000d7541ec7e4ecfa2f4be837b2a97')
+sha256sums=('53ae17de627f7a8ed0d44df2317c366b2649d54c2c43390aaad90f238853ccf7')
 
 prepare() {
   mv ${srcdir}/calamares-${_commit} ${srcdir}/calamares-${pkgver}
