@@ -3,7 +3,7 @@
 pkgname=calamares
 pkgver=3.4.2
 _pkgver=3.4.2
-pkgrel=0
+pkgrel=1
 _commit=6ff1f97aa4db51ad1231d754c85027d8533687e0
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64')
@@ -60,7 +60,7 @@ prepare() {
   mv ${srcdir}/calamares-${_commit} ${srcdir}/calamares-${pkgver}
 #  mv ${srcdir}/calamares-v${pkgver} ${srcdir}/calamares-${pkgver}
   cd ${srcdir}/calamares-${pkgver}
-  
+
   # change version
   sed -i -e "s|$pkgver|$_pkgver|g" CMakeLists.txt
 #  _ver="$(cat CMakeLists.txt | grep -m3 -e "  VERSION" | grep -o "[[:digit:]]*" | xargs | sed s'/ /./g')"
@@ -72,7 +72,7 @@ prepare() {
 
   # change branding
   sed -i -e "s/default/manjaro/g" src/branding/CMakeLists.txt
-  
+
   # Apply patches
   local src
   for src in "${source[@]}"; do
@@ -116,7 +116,7 @@ package() {
   mv "$pkgdir/usr/share/calamares/modules/services-systemd.conf" "$pkgdir/usr/share/calamares/modules/services.conf"
   sed -i -e 's/-systemd//' "$pkgdir/usr/lib/calamares/modules/services/module.desc"
   sed -i -e 's/-systemd//' "$pkgdir/usr/share/calamares/settings.conf"
-  
+
   # fix branding install
   cp -av "../src/branding/manjaro" "$pkgdir/usr/share/calamares/branding/"
 }
