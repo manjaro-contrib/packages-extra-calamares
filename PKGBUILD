@@ -3,10 +3,10 @@
 pkgname=calamares
 pkgver=3.4.2
 _pkgver=3.4.2
-pkgrel=1
+pkgrel=2
 _commit=6ff1f97aa4db51ad1231d754c85027d8533687e0
 pkgdesc='Distribution-independent installer framework'
-arch=('i686' 'x86_64')
+arch=('x86_64')
 url="https://gitlab.manjaro.org/applications/calamares"
 license=(
   'BSD-2-Clause'
